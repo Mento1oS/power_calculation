@@ -190,10 +190,10 @@ const END_VOLTAGE = 20000;
 
 const TRANSFORMER_CALCULATED = calcTransformerParams(
   4.5,
-  55,
-  30,
-  40,
-  500,
+  22,
+  14,
+  20,
+  630,
   20000
 );
 
@@ -303,7 +303,7 @@ const calculateRoadNetFromStart = (scheme, powerFlow, headVoltage) => {
   };
 };
 
-const calculateRoadNetFromEnd = (scheme, endVoltage) => {
+const calculateRoadNetFromEnd = (scheme, endVoltage, netLength) => {
   let iteration = 0;
   const changingPowerFlow = {
     activePower: scheme.power.activePower,
@@ -316,7 +316,7 @@ const calculateRoadNetFromEnd = (scheme, endVoltage) => {
   let preTransformVoltage = endVoltage;
   while (
     scheme.step * (iteration + 1) /*условие остановки итераций */ <=
-    20000 /*changingPowerFlow.activePower > scheme.power.activePower*/
+    netLength /*changingPowerFlow.activePower > scheme.power.activePower*/
   ) {
     iteration++;
     if (iteration === 1) {
@@ -485,7 +485,8 @@ const calculateRoadNetFromEnd = (scheme, endVoltage) => {
 
 const calculatedFromEnd = calculateRoadNetFromEnd(
   SCHEME_PARAMS[0],
-  END_VOLTAGE
+  END_VOLTAGE,
+  25000
 );
 
 console.log(calculatedFromEnd);
