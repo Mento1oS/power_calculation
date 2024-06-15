@@ -1,9 +1,12 @@
 /** @format */
 
-const calcLineParams = (step, r0, x0) => {
+const calcLineParams = (step, r0, x0, schemeNumber) => {
+  const r = r0 * step;
+  const x = x0 * step;
+  console.log(` r_${schemeNumber}: `, r, "\n", `x_${schemeNumber}: `, x);
   return {
-    r: r0 * step,
-    x: x0 * step,
+    r,
+    x,
   };
 };
 
@@ -11,7 +14,7 @@ const calcReactPartByCos = (act, cos) => {
   return act * Math.sqrt(1 / (cos * cos) - 1);
 };
 
-const calcDeltaPower = (
+let calcDeltaPower = (
   activeRes,
   reactiveRes,
   voltage,
@@ -27,7 +30,7 @@ const calcDeltaPower = (
   };
 };
 
-const calcDeltaVoltage = (activeRes, voltage, activePower, reactivePower) => {
+let calcDeltaVoltage = (activeRes, voltage, activePower, reactivePower) => {
   return (
     (Math.sqrt(Math.pow(activePower, 2) + Math.pow(reactivePower, 2)) *
       activeRes *
@@ -36,10 +39,39 @@ const calcDeltaVoltage = (activeRes, voltage, activePower, reactivePower) => {
   );
 };
 
+const calcDeltaVoltage2 = (
+  activeRes,
+  reactiveRes,
+  voltage,
+  activePower,
+  reactivePower
+) => {
+  return (
+    ((activePower * activeRes + reactivePower * reactiveRes) * Math.sqrt(3)) /
+    voltage
+  );
+};
+
+// calcDeltaVoltage = calcDeltaVoltage2;
+
 const calcTransformerParams = (uk, pk, ix, px, power, voltage) => {
   const rt = (pk * Math.pow(voltage, 2)) / Math.pow(power, 2);
   const xt = ((uk / 100) * Math.pow(voltage, 2)) / power;
   const qx = (ix * power) / 100;
+  console.log(
+    " rt: ",
+    rt,
+    "\n",
+    "xt: ",
+    xt,
+    "\n",
+    "qx: ",
+    qx,
+    "\n",
+    "px: ",
+    px,
+    "\n"
+  );
   return {
     rt,
     xt,
@@ -73,6 +105,7 @@ const iterativeCalculation = (
     deltaTransformerVoltage = calcDeltaVoltage(
       /* Здесь мы уже учитываем эту мощность, считаем по верхнему напряжению */
       transformer.activeRes,
+      // transformer.reactiveRes,
       initialVoltage,
       schemePower.activePower + deltaTransformerPower.active,
       schemePower.reactivePower + deltaTransformerPower.reactive
@@ -147,7 +180,7 @@ const SCHEME_PARAMS = [
       activePower: BULB_POWERS[0],
       reactivePower: calcReactPartByCos(BULB_POWERS[0], BULB_POWER_FACTOR),
     },
-    line: calcLineParams(STEPS[0], LINE_PARAMS[0].r0, LINE_PARAMS[0].x0),
+    line: calcLineParams(STEPS[0], LINE_PARAMS[0].r0, LINE_PARAMS[0].x0, 0),
     gasStationRate: GAS_STATION_RATE[0],
     chargeStationRate: CHARGE_STATION_RATE[0],
   },
@@ -160,7 +193,7 @@ const SCHEME_PARAMS = [
       activePower: BULB_POWERS[1],
       reactivePower: calcReactPartByCos(BULB_POWERS[1], BULB_POWER_FACTOR),
     },
-    line: calcLineParams(STEPS[1], LINE_PARAMS[1].r0, LINE_PARAMS[1].x0),
+    line: calcLineParams(STEPS[1], LINE_PARAMS[1].r0, LINE_PARAMS[1].x0, 1),
     gasStationRate: GAS_STATION_RATE[1],
     chargeStationRate: CHARGE_STATION_RATE[1],
   },
@@ -173,7 +206,7 @@ const SCHEME_PARAMS = [
       activePower: BULB_POWERS[2],
       reactivePower: calcReactPartByCos(BULB_POWERS[2], BULB_POWER_FACTOR),
     },
-    line: calcLineParams(STEPS[2], LINE_PARAMS[2].r0, LINE_PARAMS[2].x0),
+    line: calcLineParams(STEPS[2], LINE_PARAMS[2].r0, LINE_PARAMS[2].x0, 2),
     gasStationRate: GAS_STATION_RATE[2],
     chargeStationRate: CHARGE_STATION_RATE[2],
   },
@@ -235,6 +268,7 @@ const calculateRoadNetFromStart = (scheme, powerFlow, headVoltage) => {
 
     const deltaVoltage = calcDeltaVoltage(
       scheme.line.r,
+      // scheme.line.x,
       changingVoltage,
       changingPowerFlow.activePower,
       changingPowerFlow.reactivePower
@@ -330,12 +364,15 @@ const calculateRoadNetFromEnd = (scheme, endVoltage, netLength) => {
 
       const deltaTransformerVoltage = calcDeltaVoltage(
         TRANSFORMER.activeRes,
+        // TRANSFORMER.reactiveRes,
         preTransformVoltage,
         scheme.power.activePower,
         scheme.power.reactivePower
       );
 
       changingVoltage = preTransformVoltage + deltaTransformerVoltage;
+
+      console.log("hv1tr_volt: ", changingVoltage);
 
       const deltaPower = calcDeltaPower(
         scheme.line.r,
@@ -351,6 +388,7 @@ const calculateRoadNetFromEnd = (scheme, endVoltage, netLength) => {
 
       const deltaVoltage = calcDeltaVoltage(
         scheme.line.r,
+        // scheme.line.x,
         changingVoltage,
         changingPowerFlow.activePower +
           deltaTransformerPower.active +
@@ -413,6 +451,7 @@ const calculateRoadNetFromEnd = (scheme, endVoltage, netLength) => {
 
       const deltaVoltage = calcDeltaVoltage(
         scheme.line.r,
+        // scheme.line.x,
         changingVoltage,
         changingPowerFlow.activePower +
           deltaTransformerPower.active +
@@ -463,6 +502,9 @@ const calculateRoadNetFromEnd = (scheme, endVoltage, netLength) => {
     // }
   }
   const distance = iteration * scheme.step;
+  console.log(
+    `Напряжение до трансформации в самом конце: ${preTransformVoltage}`
+  );
   return {
     changingPowerFlow,
     changingVoltage,
@@ -486,7 +528,7 @@ const calculateRoadNetFromEnd = (scheme, endVoltage, netLength) => {
 const calculatedFromEnd = calculateRoadNetFromEnd(
   SCHEME_PARAMS[0],
   END_VOLTAGE,
-  25000
+  20000
 );
 
 console.log(calculatedFromEnd);
